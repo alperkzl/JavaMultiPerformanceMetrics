@@ -1,0 +1,63 @@
+================================================================================
+HEADER ORDER VALIDATION REPORT
+Generated: 2025-12-17 10:37:32
+================================================================================
+
+Expected Header Order:
+  1. Makespan
+  2. Avg Waiting Time
+  3. Avg Execution Time
+  4. Avg Finish Time
+  5. Energy Use Wh
+  6. Avg VM Utilization %
+  7. Avg Host Utilization%
+  8. Avg Host IDLE Time (s)
+
+Note: Headers are normalized for comparison (minor spacing differences ignored)
+
+--------------------------------------------------------------------------------
+Multi-Objective Algorithms
+--------------------------------------------------------------------------------
+
+File counts per algorithm:
+  MOEA_AMOSA: 1417 files
+  MOEA_NSGAII: 1586 files
+  MOEA_SPEAII: 1933 files
+  MOEA_eNSGA2: 170 files
+  MOEA_eNSGAII: 1371 files
+
+Total valid files: 6477
+Skipped files (naming convention): 0
+Files with order violations: 0
+
+--------------------------------------------------------------------------------
+Single - Objective Algorithms
+--------------------------------------------------------------------------------
+
+File counts per algorithm:
+  GA_AvgWait: 30 files
+  GA_Energy: 30 files
+  GA_ISL_AvgWait: 30 files
+  GA_ISL_Energy: 30 files
+  GA_ISL_Makespan: 30 files
+  GA_MAKESPAN: 30 files
+  LJF_BEST: 30 files
+  LJF_WORST: 30 files
+  SA_AvgWait: 30 files
+  SA_Energy: 30 files
+  SA_Makespan: 30 files
+  SJF_BEST: 30 files
+  SJF_WORST: 30 files
+
+Total valid files: 390
+Skipped files (naming convention): 45
+Files with order violations: 0
+
+================================================================================
+SUMMARY
+================================================================================
+Total files processed: 6867
+Total order violations found: 0
+
+
+No order violations found! All headers are in the correct order.
