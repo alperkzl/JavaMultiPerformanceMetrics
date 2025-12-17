@@ -367,19 +367,198 @@ Corresponding metric values from the simulation run.
 | Avg Host Utilization% | No | Average host utilization percentage |
 | Avg Host IDLE Time (s) | No | Average host idle time |
 
-## Using Experimental Data with Performance Metrics
+---
 
-The multi-objective algorithm results can be evaluated using the performance metrics library:
+# Task Processor: Automated Analysis Tool
 
-1. Extract the 3 key objectives from Excel files
-2. Convert to the required input format (semicolon-delimited text)
-3. Compare Pareto fronts from different algorithms using HV, IGD, Spacing, and C-Metric
+The Task Processor is a Java application that automates the analysis of experimental results from multi-objective and single-objective optimization algorithms. It parses Excel files, calculates performance metrics, and generates Pareto front visualizations.
 
-**Example comparison:**
-- Compare NSGA-II vs SPEA-II Pareto fronts for 1200 tasks
-- Evaluate which algorithm produces better convergence (IGD)
-- Evaluate which algorithm produces better diversity (Spacing)
-- Calculate coverage metric to see dominance relationships
+## Features
+
+- **Automatic File Scanning**: Scans Multi-Objective and Single-Objective result folders
+- **Flexible Filtering**: Filter by task count (700, 900, 1200) and objective pairs
+- **Performance Metrics**: Calculates HV, GD, IGD for each algorithm vs Universal Pareto Set
+- **Non-Dominated Analysis**: Identifies non-dominated solutions per algorithm
+- **Universal Pareto Set**: Computes the combined Pareto front across all algorithms
+- **CSV Reports**: Generates detailed CSV reports with all metrics
+- **Pareto Visualization**: Creates publication-ready Pareto front plots
+
+## Project Structure
+
+```
+├── src/taskprocessor/           # Task Processor source code
+│   ├── TaskProcessor.java       # Main application
+│   ├── ExcelReader.java         # Excel file parser (Apache POI)
+│   ├── Dominance.java           # Dominance comparison & non-dominated sets
+│   ├── PerformanceMetrics.java  # HV, IGD, GD, Spacing calculations
+│   └── FitnessComparator.java   # Solution sorting
+├── scripts/
+│   └── plot_pareto.py           # Python plotting script (matplotlib)
+├── build.sh                     # Build script
+├── run.sh                       # Run script
+└── lib/                         # Dependencies (downloaded at build time)
+```
+
+## Prerequisites
+
+- **Java 11+** (OpenJDK recommended)
+- **Python 3.8+** with matplotlib (for plotting)
+
+```bash
+# Install Python dependencies
+pip3 install matplotlib numpy
+```
+
+## Building
+
+```bash
+# Download dependencies and compile
+./build.sh
+```
+
+This will:
+1. Download Apache POI libraries to `lib/`
+2. Compile Java source files to `out/`
+
+## Usage
+
+### Basic Syntax
+
+```bash
+./run.sh <n> <includeSingleObjective> <objective1> <objective2> [options]
+```
+
+### Required Arguments
+
+| Argument | Description | Values |
+|----------|-------------|--------|
+| `n` | Number of tasks | `700`, `900`, or `1200` |
+| `includeSingleObjective` | Include single-objective algorithms | `true` or `false` |
+| `objective1` | First objective (X-axis) | `Makespan`, `Energy`, or `AvgWait` |
+| `objective2` | Second objective (Y-axis) | `Makespan`, `Energy`, or `AvgWait` |
+
+### Plot Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--plot` | - | Enable plot generation |
+| `--plot-title <title>` | auto | Custom plot title |
+| `--plot-legend <bool>` | `true` | Show/hide legend |
+| `--plot-labels <bool>` | `false` | Show/hide point labels |
+| `--plot-marker-size <n>` | `8` | Marker size |
+| `--plot-marker-shape <s>` | `circle` | `circle`, `square`, `triangle`, `diamond` |
+| `--plot-output <file>` | auto | Custom output filename |
+| `--plot-dpi <n>` | `150` | Image resolution |
+| `--plot-width <n>` | `12` | Figure width (inches) |
+| `--plot-height <n>` | `8` | Figure height (inches) |
+
+### Examples
+
+```bash
+# Basic analysis without plot
+./run.sh 700 false Energy Makespan
+
+# Analysis with single-objective algorithms and plot
+./run.sh 700 true Energy Makespan --plot
+
+# Custom plot title and no legend
+./run.sh 1200 false Makespan AvgWait --plot --plot-title "1200 Tasks Analysis" --plot-legend false
+
+# High-resolution plot with labels
+./run.sh 900 true Energy AvgWait --plot --plot-dpi 300 --plot-labels true
+
+# Custom output file
+./run.sh 700 false Energy Makespan --plot --plot-output my_analysis.png
+```
+
+## Output Files
+
+### CSV Report
+
+Generated as `results_<n>_<obj1>_vs_<obj2>.csv`:
+
+```csv
+Algorithm,Type,Total_Solutions,Non_Dominated_Solutions,Seed_1200,...,Seed_1209,HV,GD,IGD
+MOEA_AMOSA,Multi-Objective,42,4,2,3,8,2,4,9,1,6,5,2,0.584179,0.000000,0.132376
+MOEA_NSGAII,Multi-Objective,58,12,1,4,10,5,11,9,3,8,2,5,0.158785,0.539915,0.530084
+...
+```
+
+### Pareto Front Plot
+
+Generated as `pareto_<n>_<obj1>_vs_<obj2>.png`:
+
+- **Algorithm Colors**:
+  - Green: AMOSA
+  - Yellow: NSGA-II
+  - Blue: SPEA-II
+  - Purple: ε-NSGA-II
+  - Red: Universal Pareto Set
+  - Black: Single-Objective algorithms
+
+- **Features**:
+  - Connected Pareto front lines
+  - Universal Pareto Set highlighted with X markers
+  - Configurable legend, labels, and markers
+
+## Sample Output
+
+```
+=== Task Processor ===
+Number of tasks: 700
+Include Single-Objective: false
+Objective 1: Energy (Energy Use Wh)
+Objective 2: Makespan (Makespan)
+
+Scanning Multi-Objective files with pattern: (no suffix)
+
+Multi-Objective Solution Counts:
+  MOEA_AMOSA: 42 solutions
+  MOEA_NSGAII: 58 solutions
+  MOEA_SPEAII: 70 solutions
+  MOEA_eNSGAII: 45 solutions
+
+=== Calculating Non-Dominated Points Per Algorithm ===
+  MOEA_AMOSA: 4 non-dominated / 42 total
+  MOEA_NSGAII: 12 non-dominated / 58 total
+  MOEA_SPEAII: 14 non-dominated / 70 total
+  MOEA_eNSGAII: 8 non-dominated / 45 total
+
+=== Calculating Universal Pareto Set ===
+Universal Pareto Set size: 7 from 215 total solutions
+
+=== Calculating Performance Metrics ===
+  MOEA_AMOSA: HV=0.584179, GD=0.000000, IGD=0.132376
+  MOEA_NSGAII: HV=0.158785, GD=0.539915, IGD=0.530084
+  MOEA_SPEAII: HV=0.117176, GD=0.352278, IGD=0.338870
+  MOEA_eNSGAII: HV=0.117031, GD=0.582944, IGD=0.573934
+
+=== Generating CSV Report ===
+CSV report generated successfully!
+
+=== Generating Pareto Front Plot ===
+Plot saved to: pareto_700_Energy_vs_Makespan.png
+```
+
+## Objective Pair Mapping
+
+The experimental data uses different file naming conventions for objective pairs:
+
+| Objective Pair | File Pattern | Example |
+|----------------|--------------|---------|
+| Energy vs Makespan | (no suffix) | `MOEA_AMOSA_rnd_1200_...` |
+| Energy vs Avg. Wait | `_eVSs` | `MOEA_AMOSA_eVSs_rnd_1200_...` |
+| Makespan vs Avg. Wait | `_mVSs` | `MOEA_AMOSA_mVSs_rnd_1200_...` |
+
+## Performance Metrics Explained
+
+| Metric | Description | Better |
+|--------|-------------|--------|
+| **HV** (Hypervolume) | Volume of objective space dominated by the Pareto front | Higher |
+| **GD** (Generational Distance) | Average distance from approximation to reference front | Lower |
+| **IGD** (Inverse Generational Distance) | Average distance from reference front to approximation | Lower |
+
+All metrics are calculated against the **Universal Pareto Set** (the combined non-dominated front from all algorithms).
 
 ---
 

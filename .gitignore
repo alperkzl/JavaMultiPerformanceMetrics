@@ -1,6 +1,12 @@
 # Compiled class files
 *.class
 
+# Output directory
+out/
+
+# Library dependencies (downloaded at build time)
+lib/
+
 # Package files
 *.jar
 *.war
@@ -8,6 +14,13 @@
 
 # Log files
 *.log
+
+# Test result files
+results_*.csv
+
+# Generated plot files
+pareto_*.png
+plot_data_*.json
 
 # IDE files
 .idea/
