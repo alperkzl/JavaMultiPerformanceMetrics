@@ -497,6 +497,18 @@ public class TaskProcessor {
         System.out.println("\n=== Generating CSV Report ===");
         System.out.println("Output file: " + outputFile);
 
+        // Calculate HV for Universal Pareto Set
+        double universalParetoHV = 0.0;
+        if (!universalParetoSet.isEmpty()) {
+            ArrayList<ArrayList<Double>> universalParetoList = convertToArrayList(universalParetoSet);
+            ArrayList<ArrayList<ArrayList<Double>>> allParetos = new ArrayList<>();
+            allParetos.add(universalParetoList);
+            allParetos.add(universalParetoList);
+            allParetos.add(universalParetoList);
+            PerformanceMetrics pm = new PerformanceMetrics(allParetos);
+            universalParetoHV = pm.HV(0);
+        }
+
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
             // Header
             writer.println("Algorithm,Type,Total_Solutions,Non_Dominated_Solutions,Universal_Pareto_Contribution," +
@@ -504,7 +516,7 @@ public class TaskProcessor {
                           "Seed_1205,Seed_1206,Seed_1207,Seed_1208,Seed_1209," +
                           "HV,GD,IGD");
 
-            // Data rows
+            // Data rows for algorithms
             for (String algo : algorithmSolutions.keySet()) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(algo).append(",");
@@ -528,9 +540,25 @@ public class TaskProcessor {
                 writer.println(sb.toString());
             }
 
-            // Add universal Pareto set info
-            writer.println();
-            writer.println("Universal_Pareto_Set_Size," + universalParetoSet.size());
+            // Add Universal Pareto Set as a row
+            StringBuilder sb = new StringBuilder();
+            sb.append("Universal_Pareto_Set").append(",");
+            sb.append("Reference").append(",");
+            sb.append(universalParetoSet.size()).append(",");  // Total solutions = non-dominated (it's the Pareto set)
+            sb.append(universalParetoSet.size()).append(",");  // Non-dominated = all of them
+            sb.append(universalParetoSet.size()).append(",");  // Contribution = all of them (100%)
+
+            // No per-seed data for universal Pareto (use N/A represented as 0)
+            for (int i = 0; i < SEEDS.length; i++) {
+                sb.append("N/A").append(",");
+            }
+
+            // Metrics: HV calculated, GD=0, IGD=0 (it's the reference)
+            sb.append(String.format("%.6f", universalParetoHV)).append(",");
+            sb.append("0.000000").append(",");  // GD = 0 (reference to itself)
+            sb.append("0.000000");               // IGD = 0 (reference to itself)
+
+            writer.println(sb.toString());
         }
 
         System.out.println("CSV report generated successfully!");
