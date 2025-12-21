@@ -15,12 +15,9 @@ lib/
 # Log files
 *.log
 
-# Test result files
-results_*.csv
-
-# Generated plot files
-pareto_*.png
-plot_data_*.json
+# Generated output directories
+PerformanceCalculations/
+plots/
 
 # IDE files
 .idea/

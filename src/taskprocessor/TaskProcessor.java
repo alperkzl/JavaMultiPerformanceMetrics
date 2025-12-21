@@ -446,7 +446,13 @@ public class TaskProcessor {
     }
 
     private void generateCSVReport(Map<String, double[]> metrics) throws IOException {
-        String outputFile = basePath + "/results_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".csv";
+        // Create PerformanceCalculations directory if it doesn't exist
+        File csvDir = new File(basePath, "PerformanceCalculations");
+        if (!csvDir.exists()) {
+            csvDir.mkdirs();
+        }
+
+        String outputFile = new File(csvDir, "results_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".csv").getAbsolutePath();
 
         System.out.println("\n=== Generating CSV Report ===");
         System.out.println("Output file: " + outputFile);
@@ -496,14 +502,20 @@ public class TaskProcessor {
         boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
         String fileSeparator = File.separator;
 
-        // Generate JSON data file (use File to handle path separators correctly)
-        String jsonFile = new File(basePath, "plot_data_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".json").getAbsolutePath();
+        // Create plots directory if it doesn't exist
+        File plotsDir = new File(basePath, "plots");
+        if (!plotsDir.exists()) {
+            plotsDir.mkdirs();
+        }
+
+        // Generate JSON data file in plots directory
+        String jsonFile = new File(plotsDir, "plot_data_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".json").getAbsolutePath();
         generatePlotDataJson(jsonFile);
 
         // Determine output filename
         String outputFile = plotOutput;
         if (outputFile == null) {
-            outputFile = new File(basePath, "pareto_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".png").getAbsolutePath();
+            outputFile = new File(plotsDir, "pareto_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".png").getAbsolutePath();
         }
 
         // Build Python command - use "python" on Windows, "python3" on Unix/Linux/Mac
