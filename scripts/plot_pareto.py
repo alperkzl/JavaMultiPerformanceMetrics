@@ -19,6 +19,10 @@ Options:
     --dpi           Image DPI (default: 150)
     --width         Figure width in inches (default: 12)
     --height        Figure height in inches (default: 8)
+    --XMode         X Mode: true/false (default: false)
+                    When enabled, single-objective points are only shown if they
+                    are part of the universal Pareto set, and labels are shown
+                    for single-objective points (but not multi-objective).
 """
 
 import argparse
@@ -107,6 +111,19 @@ def sort_pareto_front(points: List[List[float]]) -> List[List[float]]:
     return sorted(points, key=lambda p: p[0])
 
 
+def is_point_in_pareto(point: List[float], pareto_set: List[List[float]], tolerance: float = 1e-9) -> bool:
+    """Check if a point is in the universal Pareto set."""
+    for p in pareto_set:
+        if abs(point[0] - p[0]) < tolerance and abs(point[1] - p[1]) < tolerance:
+            return True
+    return False
+
+
+def filter_points_in_pareto(points: List[List[float]], pareto_set: List[List[float]]) -> List[List[float]]:
+    """Filter points to only include those in the universal Pareto set."""
+    return [p for p in points if is_point_in_pareto(p, pareto_set)]
+
+
 def plot_pareto_fronts(data: Dict[str, Any], args: argparse.Namespace) -> None:
     """Create the Pareto front plot."""
 
@@ -177,8 +194,8 @@ def plot_pareto_fronts(data: Dict[str, Any], args: argparse.Namespace) -> None:
         legend_handles.append(scatter)
         legend_labels.append(display_name)
 
-        # Add point labels if enabled
-        if args.labels:
+        # Add point labels if enabled (but not in XMode for multi-objective)
+        if args.labels and not args.XMode:
             for x, y in zip(x_vals, y_vals):
                 ax.annotate(display_name, (x, y), textcoords="offset points",
                           xytext=(5, 5), fontsize=6, alpha=0.7)
@@ -187,14 +204,21 @@ def plot_pareto_fronts(data: Dict[str, Any], args: argparse.Namespace) -> None:
     if so_algorithms:
         so_x_vals = []
         so_y_vals = []
+        so_point_labels = []  # Track labels for each point
 
         for algo_name in so_algorithms:
             algo_data = algorithms[algo_name]
             points = algo_data.get('non_dominated', [])
+            display_name = get_algorithm_display_name(algo_name)
+
+            # In XMode, only include points that are in the universal Pareto set
+            if args.XMode:
+                points = filter_points_in_pareto(points, universal_pareto)
 
             for p in points:
                 so_x_vals.append(p[0])
                 so_y_vals.append(p[1])
+                so_point_labels.append(display_name)
 
         if so_x_vals:
             scatter = ax.scatter(so_x_vals, so_y_vals, c=SINGLE_OBJECTIVE_COLOR,
@@ -203,16 +227,12 @@ def plot_pareto_fronts(data: Dict[str, Any], args: argparse.Namespace) -> None:
             legend_handles.append(scatter)
             legend_labels.append('Single-Objective')
 
-            # Add labels if enabled
-            if args.labels:
-                for algo_name in so_algorithms:
-                    algo_data = algorithms[algo_name]
-                    points = algo_data.get('non_dominated', [])
-                    display_name = get_algorithm_display_name(algo_name)
-                    for p in points:
-                        ax.annotate(display_name, (p[0], p[1]),
-                                  textcoords="offset points", xytext=(5, 5),
-                                  fontsize=6, alpha=0.7)
+            # Add labels if enabled OR if XMode is on (labels always on for SO in XMode)
+            if args.labels or args.XMode:
+                for x, y, label in zip(so_x_vals, so_y_vals, so_point_labels):
+                    ax.annotate(label, (x, y),
+                              textcoords="offset points", xytext=(5, 5),
+                              fontsize=6, alpha=0.7)
 
     # Plot Universal Pareto Set
     if universal_pareto:
@@ -281,12 +301,15 @@ def main():
                        help='Figure width in inches')
     parser.add_argument('--height', type=float, default=8,
                        help='Figure height in inches')
+    parser.add_argument('--XMode', type=str, default='false',
+                       help='X Mode: true/false - Single-objective points only shown if in universal Pareto, with labels on')
 
     args = parser.parse_args()
 
     # Convert string booleans
     args.legend = args.legend.lower() == 'true'
     args.labels = args.labels.lower() == 'true'
+    args.XMode = args.XMode.lower() == 'true'
 
     # Load data
     try:
