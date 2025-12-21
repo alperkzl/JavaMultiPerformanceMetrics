@@ -492,20 +492,24 @@ public class TaskProcessor {
     private void generatePlot() throws Exception {
         System.out.println("\n=== Generating Pareto Front Plot ===");
 
-        // Generate JSON data file
-        String jsonFile = basePath + "/plot_data_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".json";
+        // Detect operating system
+        boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+        String fileSeparator = File.separator;
+
+        // Generate JSON data file (use File to handle path separators correctly)
+        String jsonFile = new File(basePath, "plot_data_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".json").getAbsolutePath();
         generatePlotDataJson(jsonFile);
 
         // Determine output filename
         String outputFile = plotOutput;
         if (outputFile == null) {
-            outputFile = basePath + "/pareto_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".png";
+            outputFile = new File(basePath, "pareto_" + numTasks + "_" + objective1 + "_vs_" + objective2 + ".png").getAbsolutePath();
         }
 
-        // Build Python command
+        // Build Python command - use "python" on Windows, "python3" on Unix/Linux/Mac
         List<String> command = new ArrayList<>();
-        command.add("python3");
-        command.add(basePath + "/scripts/plot_pareto.py");
+        command.add(isWindows ? "python" : "python3");
+        command.add(new File(basePath, "scripts" + fileSeparator + "plot_pareto.py").getAbsolutePath());
         command.add("--data");
         command.add(jsonFile);
         command.add("--output");
