@@ -25,6 +25,7 @@ import java.util.regex.*;
  *   --plot-dpi          Plot DPI (default: 150)
  *   --plot-width        Plot width in inches (default: 12)
  *   --plot-height       Plot height in inches (default: 8)
+ *   --plot-xmode        X Mode (true/false, default: false) - SO points only shown if in universal Pareto, with labels
  */
 public class TaskProcessor {
 
@@ -45,6 +46,7 @@ public class TaskProcessor {
     private int plotDpi = 150;
     private double plotWidth = 12;
     private double plotHeight = 8;
+    private boolean plotXMode = false;
 
     // Objective column mappings
     private static final Map<String, String> OBJECTIVE_COLUMNS = new HashMap<>();
@@ -115,6 +117,7 @@ public class TaskProcessor {
     public void setPlotDpi(int plotDpi) { this.plotDpi = plotDpi; }
     public void setPlotWidth(double plotWidth) { this.plotWidth = plotWidth; }
     public void setPlotHeight(double plotHeight) { this.plotHeight = plotHeight; }
+    public void setPlotXMode(boolean plotXMode) { this.plotXMode = plotXMode; }
 
     public void process() throws Exception {
         System.out.println("=== Task Processor ===");
@@ -591,6 +594,9 @@ public class TaskProcessor {
         command.add("--height");
         command.add(String.valueOf(plotHeight));
 
+        command.add("--XMode");
+        command.add(String.valueOf(plotXMode));
+
         // Execute Python script
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
@@ -701,6 +707,8 @@ public class TaskProcessor {
         System.out.println("  --plot-dpi <n>         Plot DPI (default: 150)");
         System.out.println("  --plot-width <n>       Plot width in inches (default: 12)");
         System.out.println("  --plot-height <n>      Plot height in inches (default: 8)");
+        System.out.println("  --plot-xmode <bool>    X Mode (true/false, default: false)");
+        System.out.println("                         SO points only shown if in universal Pareto, with labels on");
         System.out.println();
         System.out.println("Examples:");
         System.out.println("  java taskprocessor.TaskProcessor 700 true Energy Makespan");
@@ -768,6 +776,8 @@ public class TaskProcessor {
                     processor.setPlotWidth(Double.parseDouble(args[++i]));
                 } else if (arg.equals("--plot-height") && i + 1 < args.length) {
                     processor.setPlotHeight(Double.parseDouble(args[++i]));
+                } else if (arg.equals("--plot-xmode") && i + 1 < args.length) {
+                    processor.setPlotXMode(Boolean.parseBoolean(args[++i]));
                 } else if (!arg.startsWith("--")) {
                     // Could be base path
                     basePath = arg;
