@@ -93,6 +93,9 @@ public class TaskProcessor {
     // Universal Pareto set
     private List<double[]> universalParetoSet = new ArrayList<>();
 
+    // Track how many solutions each algorithm contributed to universal Pareto set
+    private Map<String, Integer> universalParetoContributions = new LinkedHashMap<>();
+
     public TaskProcessor(int numTasks, boolean includeSingleObjective, String objective1, String objective2, String basePath) {
         this.numTasks = numTasks;
         this.includeSingleObjective = includeSingleObjective;
@@ -341,15 +344,49 @@ public class TaskProcessor {
     private void calculateUniversalParetoSet() {
         System.out.println("\n=== Calculating Universal Pareto Set ===");
 
-        // Combine all solutions
+        // Combine all solutions with their algorithm origin
         List<double[]> allSolutions = new ArrayList<>();
-        for (List<double[]> solutions : algorithmSolutions.values()) {
-            allSolutions.addAll(solutions);
+        List<String> solutionOrigins = new ArrayList<>();  // Track which algorithm each solution came from
+
+        for (String algo : algorithmSolutions.keySet()) {
+            List<double[]> solutions = algorithmSolutions.get(algo);
+            for (double[] sol : solutions) {
+                allSolutions.add(sol);
+                solutionOrigins.add(algo);
+            }
         }
 
         // Find universal non-dominated set
         universalParetoSet = Dominance.getNonDominatedSet(allSolutions);
+
+        // Initialize contribution counts
+        for (String algo : algorithmSolutions.keySet()) {
+            universalParetoContributions.put(algo, 0);
+        }
+
+        // Count contributions from each algorithm
+        for (double[] paretoSol : universalParetoSet) {
+            // Find which algorithm(s) this solution came from
+            for (int i = 0; i < allSolutions.size(); i++) {
+                double[] sol = allSolutions.get(i);
+                if (sol[0] == paretoSol[0] && sol[1] == paretoSol[1]) {
+                    String algo = solutionOrigins.get(i);
+                    universalParetoContributions.put(algo, universalParetoContributions.get(algo) + 1);
+                    break;  // Count each Pareto solution only once
+                }
+            }
+        }
+
         System.out.println("Universal Pareto Set size: " + universalParetoSet.size() + " from " + allSolutions.size() + " total solutions");
+
+        // Print contributions
+        System.out.println("\nContributions to Universal Pareto Set:");
+        for (String algo : universalParetoContributions.keySet()) {
+            int count = universalParetoContributions.get(algo);
+            if (count > 0) {
+                System.out.println("  " + algo + ": " + count + " solutions");
+            }
+        }
     }
 
     private Map<String, double[]> calculatePerformanceMetrics() {
@@ -459,7 +496,7 @@ public class TaskProcessor {
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
             // Header
-            writer.println("Algorithm,Type,Total_Solutions,Non_Dominated_Solutions," +
+            writer.println("Algorithm,Type,Total_Solutions,Non_Dominated_Solutions,Universal_Pareto_Contribution," +
                           "Seed_1200,Seed_1201,Seed_1202,Seed_1203,Seed_1204," +
                           "Seed_1205,Seed_1206,Seed_1207,Seed_1208,Seed_1209," +
                           "HV,GD,IGD");
@@ -471,6 +508,7 @@ public class TaskProcessor {
                 sb.append(algo.startsWith("SO_") ? "Single-Objective" : "Multi-Objective").append(",");
                 sb.append(algorithmSolutions.get(algo).size()).append(",");
                 sb.append(algorithmNonDominated.get(algo).size()).append(",");
+                sb.append(universalParetoContributions.getOrDefault(algo, 0)).append(",");
 
                 // Solutions per seed
                 for (int seed : SEEDS) {
