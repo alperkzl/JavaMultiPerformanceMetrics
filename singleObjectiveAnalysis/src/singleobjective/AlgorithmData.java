@@ -45,12 +45,29 @@ public class AlgorithmData {
     public AlgorithmType getType() { return type; }
 
     /**
-     * Get the color associated with this algorithm type.
+     * Get the color associated with this specific algorithm.
+     * Colors are assigned per algorithm, not per type.
      */
     public String getColor() {
+        // SA variants - Red tones
+        if (name.equals("SA_Makespan")) return "#FF0000";      // Red
+        if (name.equals("SA_Energy")) return "#FF8C00";        // Orange
+        if (name.equals("SA_AvgWait")) return "#8B0000";       // Dark Red
+
+        // GA variants - Blue tones
+        if (name.equals("GA_MAKESPAN")) return "#0000FF";      // Blue
+        if (name.equals("GA_Energy")) return "#87CEEB";        // Light Blue (Sky Blue)
+        if (name.equals("GA_AvgWait")) return "#00008B";       // Dark Blue
+
+        // GA_ISL variants - Green tones
+        if (name.equals("GA_ISL_Makespan")) return "#228B22";  // Green (Forest Green)
+        if (name.equals("GA_ISL_Energy")) return "#90EE90";    // Light Green
+        if (name.equals("GA_ISL_AvgWait")) return "#006400";   // Dark Green
+
+        // Default fallback by type
         switch (type) {
-            case GA: return "#228B22";      // Green (Forest Green)
-            case GA_ISL: return "#0000FF";  // Blue
+            case GA: return "#0000FF";      // Blue
+            case GA_ISL: return "#228B22";  // Green
             case SA: return "#FF0000";      // Red
             default: return "#000000";      // Black
         }
@@ -60,9 +77,25 @@ public class AlgorithmData {
      * Get color name for display.
      */
     public String getColorName() {
+        // SA variants
+        if (name.equals("SA_Makespan")) return "Red";
+        if (name.equals("SA_Energy")) return "Orange";
+        if (name.equals("SA_AvgWait")) return "DarkRed";
+
+        // GA variants
+        if (name.equals("GA_MAKESPAN")) return "Blue";
+        if (name.equals("GA_Energy")) return "LightBlue";
+        if (name.equals("GA_AvgWait")) return "DarkBlue";
+
+        // GA_ISL variants
+        if (name.equals("GA_ISL_Makespan")) return "Green";
+        if (name.equals("GA_ISL_Energy")) return "LightGreen";
+        if (name.equals("GA_ISL_AvgWait")) return "DarkGreen";
+
+        // Default fallback by type
         switch (type) {
-            case GA: return "Green";
-            case GA_ISL: return "Blue";
+            case GA: return "Blue";
+            case GA_ISL: return "Green";
             case SA: return "Red";
             default: return "Black";
         }

@@ -7,10 +7,10 @@ Creates a 3D scatter plot showing all three objectives:
   - Y: Energy Consumption (Wh)
   - Z: Avg. Wait Time (s)
 
-Points are colored by algorithm type:
-  - Green: GA variants
-  - Blue: GA_ISL variants
-  - Red: SA variants
+Each algorithm has its own distinct color:
+  - SA variants: Red tones (Red, Orange, Dark Red)
+  - GA variants: Blue tones (Blue, Light Blue, Dark Blue)
+  - GA_ISL variants: Green tones (Green, Light Green, Dark Green)
 
 Usage:
     python3 plot_3d_static.py --data <json_file> [options]
@@ -22,13 +22,30 @@ import sys
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 import numpy as np
 from typing import Dict, List, Any
 
-# Algorithm type to color mapping
+# Individual algorithm color mapping
+ALGORITHM_COLORS = {
+    # SA variants - Red tones
+    'SA_Makespan': '#FF0000',      # Red
+    'SA_Energy': '#FF8C00',        # Orange
+    'SA_AvgWait': '#8B0000',       # Dark Red
+    # GA variants - Blue tones
+    'GA_MAKESPAN': '#0000FF',      # Blue
+    'GA_Energy': '#87CEEB',        # Light Blue (Sky Blue)
+    'GA_AvgWait': '#00008B',       # Dark Blue
+    # GA_ISL variants - Green tones
+    'GA_ISL_Makespan': '#228B22',  # Green (Forest Green)
+    'GA_ISL_Energy': '#90EE90',    # Light Green
+    'GA_ISL_AvgWait': '#006400',   # Dark Green
+}
+
+# Fallback type colors
 TYPE_COLORS = {
-    'GA': '#228B22',      # Green (Forest Green)
-    'GA_ISL': '#0000FF',  # Blue
+    'GA': '#0000FF',      # Blue
+    'GA_ISL': '#228B22',  # Green
     'SA': '#FF0000',      # Red
 }
 
@@ -64,14 +81,15 @@ def plot_3d_static(data: Dict[str, Any], args: argparse.Namespace) -> None:
     # Get marker size
     marker_size = args.marker_size
 
-    # Track plotted types for legend
-    plotted_types = set()
+    # Track plotted algorithms for legend
+    plotted_algorithms = []
 
     # Plot each algorithm
     for algo_name, algo_data in algorithms.items():
         points = algo_data.get('points', [])
         algo_type = algo_data.get('type', 'GA')
-        color = algo_data.get('color', TYPE_COLORS.get(algo_type, '#000000'))
+        # Use color from JSON (which comes from Java), fallback to local mapping
+        color = algo_data.get('color', ALGORITHM_COLORS.get(algo_name, TYPE_COLORS.get(algo_type, '#000000')))
 
         if not points:
             continue
@@ -85,7 +103,7 @@ def plot_3d_static(data: Dict[str, Any], args: argparse.Namespace) -> None:
         ax.scatter(x_vals, y_vals, z_vals, c=color, s=marker_size**2,
                    marker='o', alpha=0.8, edgecolors='white', linewidths=0.5)
 
-        plotted_types.add(algo_type)
+        plotted_algorithms.append((algo_name, color))
 
         # Add labels if enabled
         if args.labels:
@@ -98,23 +116,18 @@ def plot_3d_static(data: Dict[str, Any], args: argparse.Namespace) -> None:
     ax.set_zlabel(objective_z, fontsize=10, labelpad=10)
 
     # Create legend if enabled
-    if args.legend:
+    if args.legend and plotted_algorithms:
         legend_handles = []
         legend_labels = []
 
-        if 'GA' in plotted_types:
-            legend_handles.append(mpatches.Patch(color=TYPE_COLORS['GA']))
-            legend_labels.append('GA Variants')
-        if 'GA_ISL' in plotted_types:
-            legend_handles.append(mpatches.Patch(color=TYPE_COLORS['GA_ISL']))
-            legend_labels.append('GA_ISL Variants')
-        if 'SA' in plotted_types:
-            legend_handles.append(mpatches.Patch(color=TYPE_COLORS['SA']))
-            legend_labels.append('SA Variants')
+        for algo_name, color in plotted_algorithms:
+            legend_handles.append(mlines.Line2D([], [], color=color, marker='o',
+                                                linestyle='None', markersize=8,
+                                                markeredgecolor='white', markeredgewidth=0.5))
+            legend_labels.append(algo_name)
 
-        if legend_handles:
-            ax.legend(legend_handles, legend_labels, loc='upper left',
-                     framealpha=0.9, fontsize=10)
+        ax.legend(legend_handles, legend_labels, loc='upper left',
+                 framealpha=0.9, fontsize=8)
 
     # Set viewing angle for better visualization
     ax.view_init(elev=20, azim=45)

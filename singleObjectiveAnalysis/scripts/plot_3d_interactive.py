@@ -8,10 +8,10 @@ Shows all three objectives:
   - Y: Energy Consumption (Wh)
   - Z: Avg. Wait Time (s)
 
-Points are colored by algorithm type:
-  - Green: GA variants
-  - Blue: GA_ISL variants
-  - Red: SA variants
+Each algorithm has its own distinct color:
+  - SA variants: Red tones (Red, Orange, Dark Red)
+  - GA variants: Blue tones (Blue, Light Blue, Dark Blue)
+  - GA_ISL variants: Green tones (Green, Light Green, Dark Green)
 
 Features:
   - Rotate by dragging
@@ -36,17 +36,27 @@ except ImportError:
     print("Install with: pip3 install plotly", file=sys.stderr)
     sys.exit(1)
 
-# Algorithm type to color mapping
-TYPE_COLORS = {
-    'GA': '#228B22',      # Green (Forest Green)
-    'GA_ISL': '#0000FF',  # Blue
-    'SA': '#FF0000',      # Red
+# Individual algorithm color mapping
+ALGORITHM_COLORS = {
+    # SA variants - Red tones
+    'SA_Makespan': '#FF0000',      # Red
+    'SA_Energy': '#FF8C00',        # Orange
+    'SA_AvgWait': '#8B0000',       # Dark Red
+    # GA variants - Blue tones
+    'GA_MAKESPAN': '#0000FF',      # Blue
+    'GA_Energy': '#87CEEB',        # Light Blue (Sky Blue)
+    'GA_AvgWait': '#00008B',       # Dark Blue
+    # GA_ISL variants - Green tones
+    'GA_ISL_Makespan': '#228B22',  # Green (Forest Green)
+    'GA_ISL_Energy': '#90EE90',    # Light Green
+    'GA_ISL_AvgWait': '#006400',   # Dark Green
 }
 
-TYPE_NAMES = {
-    'GA': 'GA Variants',
-    'GA_ISL': 'GA_ISL Variants',
-    'SA': 'SA Variants',
+# Fallback type colors
+TYPE_COLORS = {
+    'GA': '#0000FF',      # Blue
+    'GA_ISL': '#228B22',  # Green
+    'SA': '#FF0000',      # Red
 }
 
 
@@ -62,52 +72,45 @@ def plot_3d_interactive(data: Dict[str, Any], args: argparse.Namespace) -> None:
     # Create figure
     fig = go.Figure()
 
-    # Group algorithms by type
-    type_data = {}
+    # Add a trace for each algorithm (individual colors)
     for algo_name, algo_data in algorithms.items():
-        algo_type = algo_data.get('type', 'GA')
-        if algo_type not in type_data:
-            type_data[algo_type] = {
-                'x': [], 'y': [], 'z': [],
-                'labels': [], 'hover_texts': [],
-                'color': algo_data.get('color', TYPE_COLORS.get(algo_type, '#000000'))
-            }
-
         points = algo_data.get('points', [])
-        for p in points:
-            type_data[algo_type]['x'].append(p['x'])
-            type_data[algo_type]['y'].append(p['y'])
-            type_data[algo_type]['z'].append(p['z'])
-            type_data[algo_type]['labels'].append(p['label'])
-            type_data[algo_type]['hover_texts'].append(
-                f"<b>{p['label']}</b><br>" +
-                f"Makespan: {p['x']:.2f} s<br>" +
-                f"Energy: {p['y']:.2f} Wh<br>" +
-                f"Avg Wait: {p['z']:.2f} s"
-            )
+        algo_type = algo_data.get('type', 'GA')
+        # Use color from JSON (which comes from Java), fallback to local mapping
+        color = algo_data.get('color', ALGORITHM_COLORS.get(algo_name, TYPE_COLORS.get(algo_type, '#000000')))
 
-    # Add traces for each algorithm type
-    for algo_type, type_info in type_data.items():
-        if not type_info['x']:
+        if not points:
             continue
 
+        x_vals = [p['x'] for p in points]
+        y_vals = [p['y'] for p in points]
+        z_vals = [p['z'] for p in points]
+        labels = [p['label'] for p in points]
+        hover_texts = [
+            f"<b>{p['label']}</b><br>" +
+            f"Makespan: {p['x']:.2f} s<br>" +
+            f"Energy: {p['y']:.2f} Wh<br>" +
+            f"Avg Wait: {p['z']:.2f} s"
+            for p in points
+        ]
+
         fig.add_trace(go.Scatter3d(
-            x=type_info['x'],
-            y=type_info['y'],
-            z=type_info['z'],
+            x=x_vals,
+            y=y_vals,
+            z=z_vals,
             mode='markers+text' if args.labels else 'markers',
             marker=dict(
                 size=args.marker_size,
-                color=type_info['color'],
+                color=color,
                 opacity=0.8,
                 line=dict(width=1, color='white')
             ),
-            text=type_info['labels'] if args.labels else None,
+            text=labels if args.labels else None,
             textposition='top center',
             textfont=dict(size=8),
             hovertemplate="%{customdata}<extra></extra>",
-            customdata=type_info['hover_texts'],
-            name=TYPE_NAMES.get(algo_type, algo_type),
+            customdata=hover_texts,
+            name=algo_name,
             showlegend=args.legend
         ))
 
