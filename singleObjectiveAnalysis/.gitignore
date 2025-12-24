@@ -1,0 +1,14 @@
+# Generated output files
+output/
+
+# Compiled Java classes
+out/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
