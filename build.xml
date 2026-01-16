@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NetBeans build file for JavaMultiPerformanceMetrics -->
+<project name="JavaMultiPerformanceMetrics" default="default" basedir=".">
+    <description>Builds, tests, and runs the project JavaMultiPerformanceMetrics.</description>
+    <import file="nbproject/build-impl.xml"/>
+</project>

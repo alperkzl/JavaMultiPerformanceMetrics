@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="JavaMultiPerformanceMetrics-impl" default="default" basedir="..">
+    <target name="default" depends="jar" description="Build and package the project."/>
+
+    <property file="nbproject/project.properties"/>
+
+    <path id="project.classpath">
+        <fileset dir="lib">
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
+
+    <target name="init">
+        <mkdir dir="${build.classes.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+    </target>
+
+    <target name="compile" depends="init" description="Compile the source code.">
+        <javac srcdir="${src.dir}" destdir="${build.classes.dir}"
+               includeantruntime="false" source="11" target="11">
+            <classpath refid="project.classpath"/>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile" description="Create the JAR file.">
+        <jar destfile="${dist.jar}" basedir="${build.classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main.class}"/>
+                <attribute name="Class-Path" value="lib/poi-5.2.3.jar lib/poi-ooxml-5.2.3.jar lib/poi-ooxml-lite-5.2.3.jar lib/commons-compress-1.21.jar lib/xmlbeans-5.1.1.jar lib/commons-io-2.11.0.jar lib/commons-collections4-4.4.jar lib/log4j-api-2.18.0.jar"/>
+            </manifest>
+        </jar>
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="lib"/>
+        </copy>
+    </target>
+
+    <target name="run" depends="compile" description="Run the application.">
+        <java classname="${main.class}" fork="true">
+            <classpath>
+                <pathelement path="${build.classes.dir}"/>
+                <path refid="project.classpath"/>
+            </classpath>
+            <arg line="700 true Energy Makespan"/>
+        </java>
+    </target>
+
+    <target name="clean" description="Clean build artifacts.">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
+
+    <target name="rebuild" depends="clean,jar" description="Clean and rebuild."/>
+</project>
