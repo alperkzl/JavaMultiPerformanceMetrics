@@ -10,6 +10,58 @@ import java.util.List;
 public class Dominance {
 
     /**
+     * Tolerance for floating-point comparison.
+     * Matches Python's plot_pareto.py tolerance of 1e-9.
+     */
+    public static final double EPSILON = 1e-9;
+
+    /**
+     * Check if two points are equal within the specified tolerance.
+     *
+     * @param a First point [obj1, obj2]
+     * @param b Second point [obj1, obj2]
+     * @param epsilon Tolerance for comparison
+     * @return true if points are equal within tolerance
+     */
+    public static boolean arePointsEqual(double[] a, double[] b, double epsilon) {
+        return Math.abs(a[0] - b[0]) < epsilon && Math.abs(a[1] - b[1]) < epsilon;
+    }
+
+    /**
+     * Check if two points are equal using default EPSILON tolerance.
+     *
+     * @param a First point [obj1, obj2]
+     * @param b Second point [obj1, obj2]
+     * @return true if points are equal within EPSILON tolerance
+     */
+    public static boolean arePointsEqual(double[] a, double[] b) {
+        return arePointsEqual(a, b, EPSILON);
+    }
+
+    /**
+     * Check if two points (ArrayList format) are equal within tolerance.
+     *
+     * @param a First point [obj1, obj2]
+     * @param b Second point [obj1, obj2]
+     * @param epsilon Tolerance for comparison
+     * @return true if points are equal within tolerance
+     */
+    public static boolean arePointsEqual(ArrayList<Double> a, ArrayList<Double> b, double epsilon) {
+        return Math.abs(a.get(0) - b.get(0)) < epsilon && Math.abs(a.get(1) - b.get(1)) < epsilon;
+    }
+
+    /**
+     * Check if two points (ArrayList format) are equal using default EPSILON tolerance.
+     *
+     * @param a First point [obj1, obj2]
+     * @param b Second point [obj1, obj2]
+     * @return true if points are equal within EPSILON tolerance
+     */
+    public static boolean arePointsEqual(ArrayList<Double> a, ArrayList<Double> b) {
+        return arePointsEqual(a, b, EPSILON);
+    }
+
+    /**
      * Compare two solutions for dominance.
      * Assumes minimization for both objectives.
      *
@@ -80,9 +132,10 @@ public class Dominance {
             if (!isDominated) {
                 nonDominated.removeAll(toRemove);
                 // Check if candidate is not already in the set (avoid duplicates)
+                // Uses tolerance-based comparison for floating-point safety
                 boolean exists = false;
                 for (double[] sol : nonDominated) {
-                    if (sol[0] == candidate[0] && sol[1] == candidate[1]) {
+                    if (arePointsEqual(sol, candidate)) {
                         exists = true;
                         break;
                     }
@@ -123,9 +176,10 @@ public class Dominance {
 
             if (!isDominated) {
                 nonDominated.removeAll(toRemove);
+                // Uses tolerance-based comparison for floating-point safety
                 boolean exists = false;
                 for (ArrayList<Double> sol : nonDominated) {
-                    if (sol.get(0).equals(candidate.get(0)) && sol.get(1).equals(candidate.get(1))) {
+                    if (arePointsEqual(sol, candidate)) {
                         exists = true;
                         break;
                     }

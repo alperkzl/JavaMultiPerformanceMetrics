@@ -368,14 +368,23 @@ public class TaskProcessor {
         }
 
         // Count contributions from each algorithm
+        // An algorithm gets credit if any of its solutions matches a Pareto point
+        // Multiple algorithms can get credit for the same Pareto point if they all found it
         for (double[] paretoSol : universalParetoSet) {
-            // Find which algorithm(s) this solution came from
+            // Track which algorithms have been credited for this particular Pareto solution
+            Set<String> creditedAlgos = new HashSet<>();
+
+            // Find all algorithms that contributed this solution
             for (int i = 0; i < allSolutions.size(); i++) {
                 double[] sol = allSolutions.get(i);
-                if (sol[0] == paretoSol[0] && sol[1] == paretoSol[1]) {
+                if (Dominance.arePointsEqual(sol, paretoSol)) {
                     String algo = solutionOrigins.get(i);
-                    universalParetoContributions.put(algo, universalParetoContributions.get(algo) + 1);
-                    break;  // Count each Pareto solution only once
+                    // Only credit each algorithm once per Pareto point
+                    // (handles case where same algorithm found same point in multiple seeds)
+                    if (!creditedAlgos.contains(algo)) {
+                        universalParetoContributions.put(algo, universalParetoContributions.get(algo) + 1);
+                        creditedAlgos.add(algo);
+                    }
                 }
             }
         }
