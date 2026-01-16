@@ -10,11 +10,6 @@
         </fileset>
     </path>
 
-    <path id="run.classpath">
-        <pathelement path="${build.classes.dir}"/>
-        <path refid="project.classpath"/>
-    </path>
-
     <target name="init">
         <mkdir dir="${build.classes.dir}"/>
         <mkdir dir="${dist.dir}"/>
@@ -22,18 +17,7 @@
 
     <target name="compile" depends="init" description="Compile the source code.">
         <javac srcdir="${src.dir}" destdir="${build.classes.dir}"
-               includeantruntime="false" source="11" target="11"
-               debug="true" debuglevel="lines,vars,source">
-            <classpath refid="project.classpath"/>
-        </javac>
-    </target>
-
-    <target name="compile-single" depends="init">
-        <fail unless="javac.includes">Must set property 'javac.includes'</fail>
-        <javac srcdir="${src.dir}" destdir="${build.classes.dir}"
-               includes="${javac.includes}"
-               includeantruntime="false" source="11" target="11"
-               debug="true" debuglevel="lines,vars,source">
+               includeantruntime="false" source="11" target="11">
             <classpath refid="project.classpath"/>
         </javac>
     </target>
@@ -52,35 +36,11 @@
 
     <target name="run" depends="compile" description="Run the application.">
         <java classname="${main.class}" fork="true">
-            <classpath refid="run.classpath"/>
-            <arg line="${application.args}" />
-        </java>
-    </target>
-
-    <target name="run-single" depends="compile">
-        <fail unless="run.class">Must set property 'run.class'</fail>
-        <java classname="${run.class}" fork="true">
-            <classpath refid="run.classpath"/>
-            <arg line="${application.args}" />
-        </java>
-    </target>
-
-    <target name="debug" depends="compile" description="Debug the application.">
-        <java classname="${main.class}" fork="true">
-            <classpath refid="run.classpath"/>
-            <arg line="${application.args}" />
-            <jvmarg value="-Xdebug"/>
-            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
-        </java>
-    </target>
-
-    <target name="debug-single" depends="compile">
-        <fail unless="debug.class">Must set property 'debug.class'</fail>
-        <java classname="${debug.class}" fork="true">
-            <classpath refid="run.classpath"/>
-            <arg line="${application.args}" />
-            <jvmarg value="-Xdebug"/>
-            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
+            <classpath>
+                <pathelement path="${build.classes.dir}"/>
+                <path refid="project.classpath"/>
+            </classpath>
+            <arg line="700 true Energy Makespan"/>
         </java>
     </target>
 
@@ -90,12 +50,4 @@
     </target>
 
     <target name="rebuild" depends="clean,jar" description="Clean and rebuild."/>
-
-    <!-- Javadoc target -->
-    <target name="javadoc" depends="init" description="Generate Javadoc.">
-        <mkdir dir="${dist.javadoc.dir}"/>
-        <javadoc sourcepath="${src.dir}" destdir="${dist.javadoc.dir}"
-                 classpathref="project.classpath" author="true" version="true"
-                 windowtitle="JavaMultiPerformanceMetrics API"/>
-    </target>
 </project>
