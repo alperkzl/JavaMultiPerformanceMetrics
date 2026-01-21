@@ -512,7 +512,7 @@ public class TaskProcessor {
 
             double hv = pm.HV(0);
             double igd = pm.IGD(0);
-            double gd = calculateGD(algoPareto, universalParetoSet);
+            double gd = pm.GD(0);
 
             metrics.put(algo, new double[]{hv, gd, igd});
             System.out.println("  " + algo + ": HV=" + String.format("%.6f", hv) +
@@ -532,48 +532,6 @@ public class TaskProcessor {
             result.add(row);
         }
         return result;
-    }
-
-    private double calculateGD(List<double[]> approximation, List<double[]> reference) {
-        if (approximation.isEmpty() || reference.isEmpty()) return Double.MAX_VALUE;
-
-        // Normalize solutions
-        double f1min = Double.MAX_VALUE, f1max = Double.MIN_VALUE;
-        double f2min = Double.MAX_VALUE, f2max = Double.MIN_VALUE;
-
-        for (double[] sol : approximation) {
-            f1min = Math.min(f1min, sol[0]);
-            f1max = Math.max(f1max, sol[0]);
-            f2min = Math.min(f2min, sol[1]);
-            f2max = Math.max(f2max, sol[1]);
-        }
-        for (double[] sol : reference) {
-            f1min = Math.min(f1min, sol[0]);
-            f1max = Math.max(f1max, sol[0]);
-            f2min = Math.min(f2min, sol[1]);
-            f2max = Math.max(f2max, sol[1]);
-        }
-
-        if (f1max == f1min) f1max = f1min + 1;
-        if (f2max == f2min) f2max = f2min + 1;
-
-        // Calculate GD: average distance from approximation to reference
-        double totalDistance = 0.0;
-        for (double[] approxSol : approximation) {
-            double minDist = Double.MAX_VALUE;
-            double nax1 = (approxSol[0] - f1min) / (f1max - f1min);
-            double nax2 = (approxSol[1] - f2min) / (f2max - f2min);
-
-            for (double[] refSol : reference) {
-                double nrx1 = (refSol[0] - f1min) / (f1max - f1min);
-                double nrx2 = (refSol[1] - f2min) / (f2max - f2min);
-                double dist = Math.sqrt(Math.pow(nax1 - nrx1, 2) + Math.pow(nax2 - nrx2, 2));
-                minDist = Math.min(minDist, dist);
-            }
-            totalDistance += minDist;
-        }
-
-        return totalDistance / approximation.size();
     }
 
     private void generateCSVReport(Map<String, double[]> metrics) throws IOException {
