@@ -26,6 +26,9 @@ import java.util.regex.*;
  *   --plot-width        Plot width in inches (default: 12)
  *   --plot-height       Plot height in inches (default: 8)
  *   --plot-xmode        X Mode (true/false, default: false) - SO points only shown if in universal Pareto, with labels
+ *   --plot-ymode        Y Mode (true/false, default: false) - Group SO algorithm variants:
+ *                       SA variants -> "Simulated Annealing", GA variants -> "Classic GA",
+ *                       Island GA variants -> "Island Model GA"
  */
 public class TaskProcessor {
 
@@ -47,6 +50,15 @@ public class TaskProcessor {
     private double plotWidth = 12;
     private double plotHeight = 8;
     private boolean plotXMode = false;
+    private boolean plotYMode = false;
+
+    // Algorithm group mappings for Ymode
+    private static final Map<String, String[]> ALGORITHM_GROUPS = new LinkedHashMap<>();
+    static {
+        ALGORITHM_GROUPS.put("Simulated Annealing", new String[]{"SO_SA_AvgWait", "SO_SA_Energy", "SO_SA_Makespan"});
+        ALGORITHM_GROUPS.put("Classic GA", new String[]{"SO_GA_AvgWait", "SO_GA_Energy", "SO_GA_MAKESPAN"});
+        ALGORITHM_GROUPS.put("Island Model GA", new String[]{"SO_GA_ISL_AvgWait", "SO_GA_ISL_Energy", "SO_GA_ISL_Makespan"});
+    }
 
     // Objective column mappings
     private static final Map<String, String> OBJECTIVE_COLUMNS = new HashMap<>();
@@ -118,6 +130,7 @@ public class TaskProcessor {
     public void setPlotWidth(double plotWidth) { this.plotWidth = plotWidth; }
     public void setPlotHeight(double plotHeight) { this.plotHeight = plotHeight; }
     public void setPlotXMode(boolean plotXMode) { this.plotXMode = plotXMode; }
+    public void setPlotYMode(boolean plotYMode) { this.plotYMode = plotYMode; }
 
     public void process() throws Exception {
         System.out.println("=== Task Processor ===");
@@ -125,12 +138,20 @@ public class TaskProcessor {
         System.out.println("Include Single-Objective: " + includeSingleObjective);
         System.out.println("Objective 1: " + objective1 + " (" + OBJECTIVE_COLUMNS.get(objective1) + ")");
         System.out.println("Objective 2: " + objective2 + " (" + OBJECTIVE_COLUMNS.get(objective2) + ")");
+        if (plotYMode && includeSingleObjective) {
+            System.out.println("Ymode: Enabled (grouping SA, GA, and Island GA variants)");
+        }
         System.out.println();
 
         // Step 1: Scan and parse files
         scanMultiObjectiveFiles();
         if (includeSingleObjective) {
             scanSingleObjectiveFiles();
+
+            // Apply Ymode grouping if enabled
+            if (plotYMode) {
+                applyYmodeGrouping();
+            }
         }
 
         // Step 2: Calculate non-dominated points per algorithm
@@ -333,6 +354,67 @@ public class TaskProcessor {
         return false;
     }
 
+    /**
+     * Apply Ymode grouping: combine algorithm variants into groups.
+     * - SA_AvgWait, SA_Energy, SA_Makespan -> "Simulated Annealing"
+     * - GA_AvgWait, GA_Energy, GA_MAKESPAN -> "Classic GA"
+     * - GA_ISL_AvgWait, GA_ISL_Energy, GA_ISL_Makespan -> "Island Model GA"
+     */
+    private void applyYmodeGrouping() {
+        System.out.println("\n=== Applying Ymode Grouping ===");
+
+        for (Map.Entry<String, String[]> groupEntry : ALGORITHM_GROUPS.entrySet()) {
+            String groupName = groupEntry.getKey();
+            String[] memberAlgos = groupEntry.getValue();
+
+            // Collect all solutions from member algorithms
+            List<double[]> combinedSolutions = new ArrayList<>();
+            Map<Integer, List<double[]>> combinedSeedSolutions = new LinkedHashMap<>();
+            for (int seed : SEEDS) {
+                combinedSeedSolutions.put(seed, new ArrayList<>());
+            }
+
+            // Track which algorithms were actually found
+            List<String> foundAlgos = new ArrayList<>();
+
+            for (String memberAlgo : memberAlgos) {
+                if (algorithmSolutions.containsKey(memberAlgo)) {
+                    foundAlgos.add(memberAlgo);
+
+                    // Add all solutions from this member to combined
+                    combinedSolutions.addAll(algorithmSolutions.get(memberAlgo));
+
+                    // Add solutions per seed
+                    Map<Integer, List<double[]>> memberSeeds = algorithmSeedSolutions.get(memberAlgo);
+                    if (memberSeeds != null) {
+                        for (int seed : SEEDS) {
+                            List<double[]> seedSols = memberSeeds.get(seed);
+                            if (seedSols != null) {
+                                combinedSeedSolutions.get(seed).addAll(seedSols);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // If we found at least one member algorithm, create the group
+            if (!foundAlgos.isEmpty()) {
+                System.out.println("  " + groupName + " <- " + String.join(", ", foundAlgos) +
+                                 " (" + combinedSolutions.size() + " solutions)");
+
+                // Remove individual algorithms
+                for (String memberAlgo : foundAlgos) {
+                    algorithmSolutions.remove(memberAlgo);
+                    algorithmSeedSolutions.remove(memberAlgo);
+                }
+
+                // Add the combined group
+                algorithmSolutions.put(groupName, combinedSolutions);
+                algorithmSeedSolutions.put(groupName, combinedSeedSolutions);
+            }
+        }
+    }
+
     private void calculateNonDominatedPerAlgorithm() {
         System.out.println("\n=== Calculating Non-Dominated Points Per Algorithm ===");
 
@@ -529,7 +611,15 @@ public class TaskProcessor {
             for (String algo : algorithmSolutions.keySet()) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(algo).append(",");
-                sb.append(algo.startsWith("SO_") ? "Single-Objective" : "Multi-Objective").append(",");
+                String algoType;
+                if (algo.startsWith("SO_")) {
+                    algoType = "Single-Objective";
+                } else if (ALGORITHM_GROUPS.containsKey(algo)) {
+                    algoType = "Grouped Single-Objective";
+                } else {
+                    algoType = "Multi-Objective";
+                }
+                sb.append(algoType).append(",");
                 sb.append(algorithmSolutions.get(algo).size()).append(",");
                 sb.append(algorithmNonDominated.get(algo).size()).append(",");
                 sb.append(universalParetoContributions.getOrDefault(algo, 0)).append(",");
@@ -633,6 +723,9 @@ public class TaskProcessor {
 
         command.add("--XMode");
         command.add(String.valueOf(plotXMode));
+
+        command.add("--YMode");
+        command.add(String.valueOf(plotYMode));
 
         // Execute Python script
         ProcessBuilder pb = new ProcessBuilder(command);
@@ -746,6 +839,11 @@ public class TaskProcessor {
         System.out.println("  --plot-height <n>      Plot height in inches (default: 8)");
         System.out.println("  --plot-xmode <bool>    X Mode (true/false, default: false)");
         System.out.println("                         SO points only shown if in universal Pareto, with labels on");
+        System.out.println("  --plot-ymode <bool>    Y Mode (true/false, default: false)");
+        System.out.println("                         Group SO algorithm variants into combined Pareto fronts:");
+        System.out.println("                         - SA_AvgWait, SA_Energy, SA_Makespan -> \"Simulated Annealing\"");
+        System.out.println("                         - GA_AvgWait, GA_Energy, GA_MAKESPAN -> \"Classic GA\"");
+        System.out.println("                         - GA_ISL_AvgWait, GA_ISL_Energy, GA_ISL_Makespan -> \"Island Model GA\"");
         System.out.println();
         System.out.println("Examples:");
         System.out.println("  java taskprocessor.TaskProcessor 700 true Energy Makespan");
@@ -784,12 +882,23 @@ public class TaskProcessor {
                 return;
             }
 
-            // Determine base path (look for it in the last non-option argument or use current dir)
+            // Determine base path - first scan for non-option arguments
             String basePath = System.getProperty("user.dir");
+            for (int i = 4; i < args.length; i++) {
+                String arg = args[i];
+                // Skip option values
+                if (i > 4 && args[i-1].startsWith("--") && !args[i-1].equals("--plot")) {
+                    continue;
+                }
+                if (!arg.startsWith("--")) {
+                    basePath = arg;
+                }
+            }
 
-            // Parse optional arguments
+            // Create processor with determined base path
             TaskProcessor processor = new TaskProcessor(numTasks, includeSingleObjective, objective1, objective2, basePath);
 
+            // Parse optional arguments
             for (int i = 4; i < args.length; i++) {
                 String arg = args[i];
 
@@ -815,11 +924,10 @@ public class TaskProcessor {
                     processor.setPlotHeight(Double.parseDouble(args[++i]));
                 } else if (arg.equals("--plot-xmode") && i + 1 < args.length) {
                     processor.setPlotXMode(Boolean.parseBoolean(args[++i]));
-                } else if (!arg.startsWith("--")) {
-                    // Could be base path
-                    basePath = arg;
-                    processor = new TaskProcessor(numTasks, includeSingleObjective, objective1, objective2, basePath);
+                } else if (arg.equals("--plot-ymode") && i + 1 < args.length) {
+                    processor.setPlotYMode(Boolean.parseBoolean(args[++i]));
                 }
+                // Non-option arguments (base path) already handled above
             }
 
             processor.process();

@@ -23,6 +23,12 @@ Options:
                     When enabled, single-objective points are only shown if they
                     are part of the universal Pareto set, and labels are shown
                     for single-objective points (but not multi-objective).
+    --YMode         Y Mode: true/false (default: false)
+                    When enabled, SO algorithm variants are grouped:
+                    - SA_AvgWait, SA_Energy, SA_Makespan -> "Simulated Annealing"
+                    - GA_AvgWait, GA_Energy, GA_MAKESPAN -> "Classic GA"
+                    - GA_ISL_* variants -> "Island Model GA"
+                    Groups are plotted with lines like multi-objective algorithms.
 """
 
 import argparse
@@ -47,6 +53,10 @@ ALGORITHM_COLORS = {
     'eNSGA2': '#800080',
     'Universal_Pareto': '#FF0000', # Red
     'Universal Pareto Set': '#FF0000',
+    # Ymode grouped algorithms (distinct colors for combined SO groups)
+    'Simulated Annealing': '#FF6600',   # Orange
+    'Classic GA': '#00CED1',             # Dark Turquoise
+    'Island Model GA': '#9932CC',        # Dark Orchid (distinct purple)
 }
 
 # Default color for single-objective algorithms
@@ -62,6 +72,10 @@ MARKER_SHAPES = {
     'plus': '+',
     'x': 'x',
 }
+
+
+# Ymode grouped algorithm names (these get treated like multi-objective for plotting)
+YMODE_GROUP_NAMES = ['Simulated Annealing', 'Classic GA', 'Island Model GA']
 
 
 def get_algorithm_color(algo_name: str) -> str:
@@ -81,6 +95,11 @@ def get_algorithm_color(algo_name: str) -> str:
 
     # Default fallback
     return SINGLE_OBJECTIVE_COLOR
+
+
+def is_ymode_group(algo_name: str) -> bool:
+    """Check if algorithm is a Ymode grouped algorithm."""
+    return algo_name in YMODE_GROUP_NAMES
 
 
 def get_algorithm_display_name(algo_name: str) -> str:
@@ -152,8 +171,10 @@ def plot_pareto_fronts(data: Dict[str, Any], args: argparse.Namespace) -> None:
     legend_handles = []
     legend_labels = []
 
-    # Define plot order: multi-objective first, then single-objective
-    mo_algorithms = [a for a in algorithms.keys() if not a.startswith('SO_')]
+    # Define plot order: multi-objective first, then Ymode groups, then single-objective
+    # Ymode grouped algorithms are treated like multi-objective (with lines)
+    mo_algorithms = [a for a in algorithms.keys() if not a.startswith('SO_') and not is_ymode_group(a)]
+    ymode_algorithms = [a for a in algorithms.keys() if is_ymode_group(a)]
     so_algorithms = [a for a in algorithms.keys() if a.startswith('SO_')]
 
     # Sort multi-objective algorithms in specific order
@@ -196,6 +217,39 @@ def plot_pareto_fronts(data: Dict[str, Any], args: argparse.Namespace) -> None:
 
         # Add point labels if enabled (but not in XMode for multi-objective)
         if args.labels and not args.XMode:
+            for x, y in zip(x_vals, y_vals):
+                ax.annotate(display_name, (x, y), textcoords="offset points",
+                          xytext=(5, 5), fontsize=6, alpha=0.7)
+
+    # Plot Ymode grouped algorithms (treated like multi-objective with lines)
+    for algo_name in ymode_algorithms:
+        algo_data = algorithms[algo_name]
+        points = algo_data.get('non_dominated', [])
+
+        if not points:
+            continue
+
+        color = get_algorithm_color(algo_name)
+        display_name = algo_name  # Use the group name as-is
+
+        # Sort points for line drawing
+        sorted_points = sort_pareto_front(points)
+        x_vals = [p[0] for p in sorted_points]
+        y_vals = [p[1] for p in sorted_points]
+
+        # Plot line connecting points
+        line, = ax.plot(x_vals, y_vals, color=color, linewidth=1.5, zorder=1)
+
+        # Plot points
+        scatter = ax.scatter(x_vals, y_vals, c=color, s=marker_size**2,
+                           marker=marker, edgecolors='white', linewidths=0.5, zorder=2)
+
+        # Add to legend
+        legend_handles.append(scatter)
+        legend_labels.append(display_name)
+
+        # Add point labels if enabled
+        if args.labels:
             for x, y in zip(x_vals, y_vals):
                 ax.annotate(display_name, (x, y), textcoords="offset points",
                           xytext=(5, 5), fontsize=6, alpha=0.7)
@@ -303,6 +357,8 @@ def main():
                        help='Figure height in inches')
     parser.add_argument('--XMode', type=str, default='false',
                        help='X Mode: true/false - Single-objective points only shown if in universal Pareto, with labels on')
+    parser.add_argument('--YMode', type=str, default='false',
+                       help='Y Mode: true/false - SO algorithm variants grouped into combined Pareto fronts')
 
     args = parser.parse_args()
 
@@ -310,6 +366,7 @@ def main():
     args.legend = args.legend.lower() == 'true'
     args.labels = args.labels.lower() == 'true'
     args.XMode = args.XMode.lower() == 'true'
+    args.YMode = args.YMode.lower() == 'true'
 
     # Load data
     try:
